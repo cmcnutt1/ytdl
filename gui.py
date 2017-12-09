@@ -1,8 +1,43 @@
 import os
+import re
 import subprocess
 import sys
 import tkinter as tk
 import youtube_dl as ytdl
+import configparser
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+
+#Spotify credential stuff globals
+global SPOTICLI, SPOTISEC
+
+def getSpotifyClientCreds():
+  config = configparser.ConfigParser()
+  configPath = os.getcwd()
+  configPath = configPath + '/config.ini'
+  config.read(configPath)
+
+  SPOTICLI = config['keys']['spotify_client_id']
+  SPOTISEC = config['keys']['spotify_client_secret']
+
+
+def getSongData(title):
+  songQuery = cleanTitle(title)
+
+#co-opted from musictools package
+def cleanTitle(title):
+  words_filter = ('official','lyrics','audio','remixed','remix','video','full','version','music','mp3','hd','hq','uploaded','explicit')
+  chars_filter = "()[]{}-:_/=+\"\'"
+
+  song_name = title.split()
+
+  song_name = ''.join(map(lambda c: " " if c in chars_filter else c, song_name))
+  song_name = re.sub('|'.join(re.escape(key) for key in words_filter), "", song_name, flags=re.IGNORECASE)
+
+  song_name = re.sub(' +', ' ', song_name)
+
+  print(song_name)
+  return song_name.strip()
 
 def download(url, urlType):
   alterPath()
@@ -17,8 +52,14 @@ def download(url, urlType):
   }
 
   with ytdl.YoutubeDL(downloadOptions) as ydl:
-    ydl.download([url])
-  moveFiles()
+    #ydl.download([url])
+    vid_info = ydl.extract_info(url, download=False)
+    title = vid_info['title']
+    print(title)
+    clean_title = cleanTitle(title)
+    print(clean_title)
+    #getSongData(cleanTitle(ydl.extract_info(url, download=False)))
+  #moveFiles()
 
 def alterPath():
   currDir = os.getcwd()
@@ -77,3 +118,4 @@ class Application(tk.Frame):
 root = tk.Tk()
 app = Application(master=root)
 app.mainloop()
+logInToSpotify()
