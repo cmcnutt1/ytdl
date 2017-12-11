@@ -3,13 +3,16 @@ import re
 import subprocess
 import sys
 import tkinter as tk
+import requests
 import youtube_dl as ytdl
 import configparser
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from mutagen.id3 import ID3, APIC, _util
+from mutagen.mp3 import EasyMP3
+from mutagen.easyid3 import EasyID3
 
-#Spotify credential stuff globals
-global SPOTICLI, SPOTISEC
+#-------------------------------------------------------------------------------
 
 def getSpotifyClientCreds():
   config = configparser.ConfigParser()
@@ -17,27 +20,104 @@ def getSpotifyClientCreds():
   configPath = configPath + '/config.ini'
   config.read(configPath)
 
-  SPOTICLI = config['keys']['spotify_client_id']
-  SPOTISEC = config['keys']['spotify_client_secret']
+  spotiCli = config['keys']['spotify_client_id']
+  spotiSec = config['keys']['spotify_client_secret']
+  
+  return [spotiCli, spotiSec]
 
+#-------------------------------------------------------------------------------
 
 def getSongData(title):
   songQuery = cleanTitle(title)
+  creds = getSpotifyClientCreds()
+  clientCreds = SpotifyClientCredentials(creds[0], creds[1])
+  sp = spotipy.Spotify(client_credentials_manager=clientCreds)
+  result = sp.search(songQuery, limit=1)
+  result = result['tracks']['items'][0]
+  track = result['name']
+  artist = result['album']['artists'][0]['name']
+  album = result['album']['name']
+  artLink = result['album']['images'][0]['url']
+  print(track)
+  print(artist)
+  print(album)
+  print(artLink)
+
+  return [track, artist, album, artLink]
+
+#-------------------------------------------------------------------------------
 
 #co-opted from musictools package
 def cleanTitle(title):
   words_filter = ('official','lyrics','audio','remixed','remix','video','full','version','music','mp3','hd','hq','uploaded','explicit')
-  chars_filter = "()[]{}-:_/=+\"\'"
+  chars_filter = "&()[]{}-:_/=+\"\'"
 
   song_name = title.split()
 
-  song_name = ''.join(map(lambda c: " " if c in chars_filter else c, song_name))
+  song_name = ' '.join(map(lambda c: " " if c in chars_filter else c, song_name))
   song_name = re.sub('|'.join(re.escape(key) for key in words_filter), "", song_name, flags=re.IGNORECASE)
 
   song_name = re.sub(' +', ' ', song_name)
 
-  print(song_name)
   return song_name.strip()
+
+# ------------------------------------------------------------------------------
+
+def applyTags(songData):
+
+  print('doing tag stuff')
+  target = getAudioFile()
+  tags = EasyID3(target)
+
+  tags['title'] = songData[0]
+  tags['artist'] = songData[1]
+  tags['album'] = songData[2]
+
+  tags.save()
+
+  print(tags)
+
+  addCoverArt(songData[3])
+
+#-------------------------------------------------------------------------------
+  
+#also co-opted from musictools package
+def addCoverArt(url):
+  img = requests.get(url, stream=True)
+  img = img.raw
+  target = getAudioFile()
+  audio = EasyMP3(target, ID3=ID3)
+
+  try:
+    audio.add_tags()
+  except _util.error:
+    pass
+
+  audio.tags.add(
+    APIC(
+      encoding=3,
+      mime='image/png',
+      type=3,
+      desc='Cover',
+      data = img.read()
+    )
+  )
+
+  print(audio.tags)
+
+  audio.save(v2_version=4)
+
+#-------------------------------------------------------------------------------
+
+def getAudioFile():
+  for f in os.listdir(os.getcwd()):
+    if f.endswith('.mp3'):
+      #audioFile = os.path.join(os.getcwd(), f)
+      audioFile = f
+  print(audioFile)
+  return audioFile
+
+#-------------------------------------------------------------------------------
 
 def download(url, urlType):
   alterPath()
@@ -52,14 +132,16 @@ def download(url, urlType):
   }
 
   with ytdl.YoutubeDL(downloadOptions) as ydl:
-    #ydl.download([url])
+    ydl.download([url])
     vid_info = ydl.extract_info(url, download=False)
     title = vid_info['title']
-    print(title)
-    clean_title = cleanTitle(title)
-    print(clean_title)
-    #getSongData(cleanTitle(ydl.extract_info(url, download=False)))
-  #moveFiles()
+    try:
+      songData = getSongData(title)
+      applyTags(songData)
+    except:
+      pass
+
+  moveFiles()
 
 def alterPath():
   currDir = os.getcwd()
@@ -118,4 +200,3 @@ class Application(tk.Frame):
 root = tk.Tk()
 app = Application(master=root)
 app.mainloop()
-logInToSpotify()
