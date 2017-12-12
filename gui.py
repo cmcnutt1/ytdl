@@ -14,10 +14,13 @@ from mutagen.easyid3 import EasyID3
 
 #-------------------------------------------------------------------------------
 
+
 def getSpotifyClientCreds():
+  testing = True
   config = configparser.ConfigParser()
   configPath = os.getcwd()
-  configPath = configPath + '/config.ini'
+  if(testing):
+    configPath = configPath + '/config.ini'
   config.read(configPath)
 
   spotiCli = config['keys']['spotify_client_id']
@@ -148,7 +151,7 @@ def alterPath():
   os.environ['PATH'] += os.pathsep + currDir + '\\ffmpeg' + os.pathsep + currDir + '\\ffprobe'
 
 def moveFiles():
-  subprocess.call("move *.mp3 %HOMEPATH%/Music/Downloads", shell=True)
+  subprocess.call("move *.mp3 %HOMEPATH%/Music/Downloads/Youtube", shell=True)
 
 class Application(tk.Frame): 
 
