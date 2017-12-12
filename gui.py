@@ -136,7 +136,7 @@ def download(url, urlType):
     try:
       songData = getSongData(title)
       applyTags(songData)
-      moveFiles(songData[1])
+      moveFiles(songData[0], songData[1])
     except Exception as e:
       print(e)
       print('something fucked up')
@@ -146,16 +146,21 @@ def alterPath():
   currDir = os.getcwd()
   os.environ['PATH'] += os.pathsep + currDir + '\\ffmpeg' + os.pathsep + currDir + '\\ffprobe'
 
-def moveFiles(artist = None):
+
+def moveFiles(track = None, artist = None):
+
+  if track is not None:
+    subprocess.call('ren *.mp3 "' + track + '.mp3', shell=True)
+
   if artist is None:
     subprocess.call("move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/Unknown/", shell=True)
   else:
     isDir = os.path.isdir(os.environ['HOMEPATH'] + '\\Music\\Downloads\\Youtube\\%s' % artist)
     if isDir:
-      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/%s' % artist, shell=True)
+      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/"'+artist+'"\\', shell=True)
     else:
       subprocess.call('mkdir %HOMEPATH%\Music\Downloads\Youtube\\"'+artist+'"\\', shell = True)
-      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/"'+artist+'"/', shell = True)
+      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/"'+artist+'"/"', shell = True) 
 
 class Application(tk.Frame): 
 
