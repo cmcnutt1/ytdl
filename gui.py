@@ -35,16 +35,14 @@ def getSongData(title):
   creds = getSpotifyClientCreds()
   clientCreds = SpotifyClientCredentials(creds[0], creds[1])
   sp = spotipy.Spotify(client_credentials_manager=clientCreds)
-  result = sp.search(songQuery, limit=1)
+
+  result = sp.search(songQuery, type='track', limit=1)
+
   result = result['tracks']['items'][0]
   track = result['name']
   artist = result['album']['artists'][0]['name']
   album = result['album']['name']
   artLink = result['album']['images'][0]['url']
-  print(track)
-  print(artist)
-  print(album)
-  print(artLink)
 
   return [track, artist, album, artLink]
 
@@ -78,8 +76,6 @@ def applyTags(songData):
 
   tags.save()
 
-  print(tags)
-
   addCoverArt(songData[3])
 
 #-------------------------------------------------------------------------------
@@ -105,8 +101,6 @@ def addCoverArt(url):
       data = img.read()
     )
   )
-
-  print(audio.tags)
 
   audio.save(v2_version=4)
 
@@ -142,17 +136,26 @@ def download(url, urlType):
     try:
       songData = getSongData(title)
       applyTags(songData)
-    except:
-      pass
-
-  moveFiles()
+      moveFiles(songData[1])
+    except Exception as e:
+      print(e)
+      print('something fucked up')
+      moveFiles()
 
 def alterPath():
   currDir = os.getcwd()
   os.environ['PATH'] += os.pathsep + currDir + '\\ffmpeg' + os.pathsep + currDir + '\\ffprobe'
 
-def moveFiles():
-  subprocess.call("move *.mp3 %HOMEPATH%/Music/Downloads/Youtube", shell=True)
+def moveFiles(artist = None):
+  if artist is None:
+    subprocess.call("move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/Unknown/", shell=True)
+  else:
+    isDir = os.path.isdir(os.environ['HOMEPATH'] + '\\Music\\Downloads\\Youtube\\%s' % artist)
+    if isDir:
+      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/%s' % artist, shell=True)
+    else:
+      subprocess.call('mkdir %HOMEPATH%\Music\Downloads\Youtube\\"'+artist+'"\\', shell = True)
+      subprocess.call('move *.mp3 %HOMEPATH%/Music/Downloads/Youtube/"'+artist+'"/', shell = True)
 
 class Application(tk.Frame): 
 
