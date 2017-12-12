@@ -126,6 +126,7 @@ def download(url, urlType):
   alterPath()
   print(os.environ['PATH'])
   downloadOptions = {
+    'noplaylist': True,
     'format': 'bestaudio/best',
     'postprocessors': [{
       'key': 'FFmpegExtractAudio',
